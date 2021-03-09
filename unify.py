@@ -1,4 +1,3 @@
-
 import argparse
 import datatable as dt
 import cov_dates as cd
@@ -10,8 +9,13 @@ import csv
 import sys
 import glob
 import time
-csv.field_size_limit(sys.maxsize)
 
+if os.name == "nt":
+    import ctypes
+
+    csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
+else:
+    csv.field_size_limit(sys.maxsize)
 # cd ~/Corona/archive_ard/
 # python ~/Corona/unify.py -d ~/Corona/archive_v2 ~/Corona/archive_ard/NPGEO-RKI-*.csv
 
@@ -84,8 +88,9 @@ def loadCensus(fileName="../CensusByRKIAgeGroups.csv"):
     sKeys = census[:, "IdLandkreis"].to_list()[0]
     values = census[:, "Landkreis"].to_list()[0]
     valuesDict = dict(zip(sKeys, values))
-    #print(valuesDict)
+    # print(valuesDict)
     return valuesDict
+
 
 # def loadLandkreisBeveolkerung(fileName="../Landkreise-Bevoelkerung.csv"):
 #     result = {}
@@ -99,19 +104,21 @@ def loadCensus(fileName="../CensusByRKIAgeGroups.csv"):
 #                 result[LandkreisID] = int(BevoelkerungStr)
 #     return result
 
+
 def loadLandkreisFlaeche(fileName="../covid-19-germany-landkreise.csv"):
     result = {}
-    with open(fileName, newline='') as csvfile:
-        reader = csv.DictReader(csvfile, delimiter=';')
+    with open(fileName, newline="") as csvfile:
+        reader = csv.DictReader(csvfile, delimiter=";")
         for i, row in enumerate(reader):
-            #print(row)
-            LandkreisID = int(row['Regional code'])
-            FlaecheStr = row['Cadastral area']
+            # print(row)
+            LandkreisID = int(row["Regional code"])
+            FlaecheStr = row["Cadastral area"]
             if FlaecheStr != "":
-                #print(FlaecheStr)
+                # print(FlaecheStr)
                 result[LandkreisID] = float(FlaecheStr)
-    #print("Flaeche:", result)
+    # print("Flaeche:", result)
     return result
+
 
 def checkLandkreisData(data, row, Census, Flaeche):
     missingIds = []
@@ -125,26 +132,38 @@ def checkLandkreisData(data, row, Census, Flaeche):
         print("#Info: Changed bad Göttingen Landkreis Id from 3152 to 3159")
     if Landkreis == "LK Aachen" or IdLandkreis == 5354:
         # change bad Landkreis for Aachen to Stadtregion
-        print("#Info: Bad record in row:",row)
-        print("#Info: Changing bad '{}' Kreis with Id {} to ‘StadtRegion Aachen‘ id 5334".format(Landkreis, IdLandkreis))
+        print("#Info: Bad record in row:", row)
+        print(
+            "#Info: Changing bad '{}' Kreis with Id {} to ‘StadtRegion Aachen‘ id 5334".format(
+                Landkreis, IdLandkreis
+            )
+        )
         Landkreis = "StadtRegion Aachen"
         IdLandkreis = 5334
         data["Landkreis"][row] = Landkreis
         data["IdLandkreis"][row] = IdLandkreis
 
-    #print(record)
-    #print(record["IdLandkreis"])
-    #censusLK = Census[dt.f.IdLandkreis == IdLandkreis,:]
+    # print(record)
+    # print(record["IdLandkreis"])
+    # censusLK = Census[dt.f.IdLandkreis == IdLandkreis,:]
     if IdLandkreis >= 0:
         if IdLandkreis not in Census:
-            print("No census data for Landkreis Id: {} Name: {}".format(IdLandkreis, Landkreis))
+            print(
+                "No census data for Landkreis Id: {} Name: {}".format(
+                    IdLandkreis, Landkreis
+                )
+            )
             exit(1)
 
         if IdLandkreis not in Flaeche:
-            print("No area data for Landkreis Id: {} Name: {}".format(IdLandkreis, Landkreis))
+            print(
+                "No area data for Landkreis Id: {} Name: {}".format(
+                    IdLandkreis, Landkreis
+                )
+            )
             exit(1)
 
-    #if IdLandkreis in Bevoelkerung:
+    # if IdLandkreis in Bevoelkerung:
     #    KreisBevoelkerung = Bevoelkerung[IdLandkreis]
     #    data["Bevoelkerung"][row] = KreisBevoelkerung
     #    data["FaellePro100k"][row] = data["AnzahlFall"][row]*100000/KreisBevoelkerung
@@ -172,42 +191,53 @@ def checkLandkreisData(data, row, Census, Flaeche):
     #         print("Bevoelkerung missing:", missingNames)
     return data
 
+
 Flaeche = loadLandkreisFlaeche()
 Census = loadCensus()
 
 # much faster than the version above
 def unify(table):
-    dss = table[0,"Datenstand"]
+    dss = table[0, "Datenstand"]
     ds = cd.datetimeFromDatenstandAny(dss)
 
     dsdy = cd.dayFromDate(ds)
     hasRefdatum = "Refdatum" in table.names
     hasErkrankungsbeginn = "IstErkrankungsbeginn" in table.names
-    #t = table.copy()
+    # t = table.copy()
     t = table
     if "Altersgruppe2" in table.names:
-        t = t[:,dt.f[:].remove(dt.f["Altersgruppe2"])]
+        t = t[:, dt.f[:].remove(dt.f["Altersgruppe2"])]
     if not "DatenstandISO" in table.names:
         isodate = cd.dateStrYMDFromDay(dsdy)
         t = t[:, dt.f[:].extend({"DatenstandISO": isodate})]
     if not hasRefdatum:
-        t = t[:, dt.f[:].extend({"Refdatum": str(cd.day0d), "RefdatumISO": dt.f.MeldedatumISO})]
+        t = t[
+            :,
+            dt.f[:].extend(
+                {"Refdatum": str(cd.day0d), "RefdatumISO": dt.f.MeldedatumISO}
+            ),
+        ]
     if not hasErkrankungsbeginn:
         t = t[:, dt.f[:].extend({"IstErkrankungsbeginn": 0})]
 
     if "NeuGenesen" not in table.names:
-        t = t[:, dt.f[:].extend({"NeuGenesen":-9, "AnzahlGenesen":0})]
+        t = t[:, dt.f[:].extend({"NeuGenesen": -9, "AnzahlGenesen": 0})]
 
-    t = t[:, dt.f[:].extend({"FallGruppe":"", "MeldeTag":nan, "RefTag":nan, "DatenstandTag":dsdy})]
+    t = t[
+        :,
+        dt.f[:].extend(
+            {"FallGruppe": "", "MeldeTag": nan, "RefTag": nan, "DatenstandTag": dsdy}
+        ),
+    ]
 
-    #t = t[:, dt.f[:].extend({"Bevoelkerung":0, "FaellePro100k":0.0, "TodesfaellePro100k":0.0, "isStadt":False})]
-    #t = t[:, dt.f[:].extend({"Flaeche":0.0, "FaelleProKm2":0.0, "TodesfaelleProKm2":0.0, "Dichte":0.0})]
+    # t = t[:, dt.f[:].extend({"Bevoelkerung":0, "FaellePro100k":0.0, "TodesfaellePro100k":0.0, "isStadt":False})]
+    # t = t[:, dt.f[:].extend({"Flaeche":0.0, "FaelleProKm2":0.0, "TodesfaelleProKm2":0.0, "Dichte":0.0})]
 
-    #print("unified fields", t.names)
+    # print("unified fields", t.names)
 
-    #Bevoelkerung = loadLandkreisBeveolkerung()
-    #Flaeche = loadLandkreisFlaeche()
-    #Census = loadCensus()
+    # Bevoelkerung = loadLandkreisBeveolkerung()
+    # Flaeche = loadLandkreisFlaeche()
+    # Census = loadCensus()
 
     pmu.printMemoryUsage("unify pre realize ")
     t.materialize(to_memory=True)
@@ -227,10 +257,15 @@ def unify(table):
         mdy = cd.dayFromDate(md)
         d["MeldeTag"][r] = mdy
         if not hasRefdatum:
-            d["Refdatum"][r]= str(md)
-            d["RefTag"][r]= mdy
+            d["Refdatum"][r] = str(md)
+            d["RefTag"][r] = mdy
 
-        fg = str(d["IdLandkreis"][r]) + d["Altersgruppe"][r]+ d["Geschlecht"][r]+str(int(d["MeldeTag"][r]))
+        fg = (
+            str(d["IdLandkreis"][r])
+            + d["Altersgruppe"][r]
+            + d["Geschlecht"][r]
+            + str(int(d["MeldeTag"][r]))
+        )
 
         if int(d["IstErkrankungsbeginn"][r]) == 1:
             rds = d["Refdatum"][r]
@@ -241,30 +276,36 @@ def unify(table):
                 rd = rd.replace(tzinfo=None)
             rdy = cd.dayFromDate(rd)
             d["RefTag"][r] = rdy
-            fg = fg+":"+str(rdy)
+            fg = fg + ":" + str(rdy)
         d["FallGruppe"][r] = fg
         checkLandkreisData(d, r, Census, Flaeche)
 
     finish = time.perf_counter()
 
-    print("< iterating through {} rows done, {:.1f} rows/sec".format(t.nrows, t.nrows/(finish-start)))
+    print(
+        "< iterating through {} rows done, {:.1f} rows/sec".format(
+            t.nrows, t.nrows / (finish - start)
+        )
+    )
 
     pmu.printMemoryUsage("end of unify, pre frame")
     t = dt.Frame(d)
     pmu.printMemoryUsage("end of unify, post frame")
     return t
 
+
 def save(table, origFileName, destDir="."):
     path = os.path.normpath(origFileName)
     fileName = path.split(os.sep)[-1]
-    newFile =  destDir+"/X-"+fileName
-    print("Saving "+newFile)
+    newFile = destDir + "/X-" + fileName
+    print("Saving " + newFile)
     table.to_csv(newFile)
+
 
 def isNewData(dataFilename, daysIncluded):
     pmu.printMemoryUsage("begin of isNewData")
     peekTable = dt.fread(dataFilename, max_nrows=1)
-    print("Checking "+dataFilename)
+    print("Checking " + dataFilename)
     ##print(peekTable)
     ##datenStand = peekTable[0, dt.f.DatenstandISO]
     dss = peekTable[0, "Datenstand"]
@@ -281,61 +322,100 @@ def isNewData(dataFilename, daysIncluded):
 
     return isNew
 
+
 def tableData(dataFilename):
     print("Loading " + dataFilename)
     fullTable = dt.fread(dataFilename)
     print("Loading done loading table from ‘" + dataFilename + "‘, keys:")
-    #print(fullTable.keys())
+    # print(fullTable.keys())
     if "NeuerFall" not in fullTable.keys():
-        print("NeuerFall/NeuerTodesfall not in data file, creating column with default value 1 (Neuer Fall nur heute)")
-        fullTable = fullTable[:, dt.f[:].extend({"NeuerFall":1, "NeuerTodesfall":1})]
+        print(
+            "NeuerFall/NeuerTodesfall not in data file, creating column with default value 1 (Neuer Fall nur heute)"
+        )
+        fullTable = fullTable[:, dt.f[:].extend({"NeuerFall": 1, "NeuerTodesfall": 1})]
 
-    cases = fullTable[(dt.f.NeuerFall == 0) | (dt.f.NeuerFall == 1), 'AnzahlFall'].sum()[0, 0]
-    new_cases = fullTable[(dt.f.NeuerFall == -1) | (dt.f.NeuerFall == 1), 'AnzahlFall'].sum()[0, 0]
-    dead = fullTable[(dt.f.NeuerTodesfall == 0) | (dt.f.NeuerTodesfall == 1), 'AnzahlTodesfall'].sum()[0, 0]
-    new_dead = fullTable[(dt.f.NeuerTodesfall == -1) | (dt.f.NeuerTodesfall == 1), 'AnzahlTodesfall'].sum()[0, 0]
+    cases = fullTable[
+        (dt.f.NeuerFall == 0) | (dt.f.NeuerFall == 1), "AnzahlFall"
+    ].sum()[0, 0]
+    new_cases = fullTable[
+        (dt.f.NeuerFall == -1) | (dt.f.NeuerFall == 1), "AnzahlFall"
+    ].sum()[0, 0]
+    dead = fullTable[
+        (dt.f.NeuerTodesfall == 0) | (dt.f.NeuerTodesfall == 1), "AnzahlTodesfall"
+    ].sum()[0, 0]
+    new_dead = fullTable[
+        (dt.f.NeuerTodesfall == -1) | (dt.f.NeuerTodesfall == 1), "AnzahlTodesfall"
+    ].sum()[0, 0]
 
     recovered = 0
     new_recovered = 0
     if "NeuGenesen" in fullTable.keys():
-        recovered = fullTable[(dt.f.NeuGenesen == 0) | (dt.f.NeuGenesen == 1), 'AnzahlGenesen'].sum()[0, 0]
-        new_recovered = fullTable[(dt.f.NeuGenesen == -1) | (dt.f.NeuGenesen == 1), 'AnzahlGenesen'].sum()[0, 0]
-    #lastDay=fullTable[:,'MeldeDay'].max()[0,0]
-    #lastnewCaseOnDay=fullTable[:,'newCaseOnDay'].max()[0,0]
-    print("{}: cases {} (+{}), dead {} (+{}), recovered {} (+{})".format(
-        dataFilename, int(cases), int(new_cases), int(dead), int(new_dead), int(recovered),int(new_recovered)))
+        recovered = fullTable[
+            (dt.f.NeuGenesen == 0) | (dt.f.NeuGenesen == 1), "AnzahlGenesen"
+        ].sum()[0, 0]
+        new_recovered = fullTable[
+            (dt.f.NeuGenesen == -1) | (dt.f.NeuGenesen == 1), "AnzahlGenesen"
+        ].sum()[0, 0]
+    # lastDay=fullTable[:,'MeldeDay'].max()[0,0]
+    # lastnewCaseOnDay=fullTable[:,'newCaseOnDay'].max()[0,0]
+    print(
+        "{}: cases {} (+{}), dead {} (+{}), recovered {} (+{})".format(
+            dataFilename,
+            int(cases),
+            int(new_cases),
+            int(dead),
+            int(new_dead),
+            int(recovered),
+            int(new_recovered),
+        )
+    )
     return fullTable
+
 
 def checkColumns(list1, list2):
     diff12 = set(list1) - set(list2)
     if len(diff12):
-        print("missing in List1",diff12)
+        print("missing in List1", diff12)
     diff21 = set(list2) - set(list1)
     if len(diff21):
-        print("missing in List2",diff21)
+        print("missing in List2", diff21)
+
 
 def main():
     start = time.perf_counter()
-    parser = argparse.ArgumentParser(description='Create a unfied data file from daily dumps')
-    parser.add_argument('files', metavar='fileName', type=str, nargs='+',
-                        help='.NPGEO COVID19 Germany data as .csv file')
-    parser.add_argument('-d', '--output-dir', dest='outputDir', default=".")
-    parser.add_argument("--flushmemfull", help="flush full table to disk for lower memory footprint",
-                        action="store_true")
-    parser.add_argument("--flushmemnew", help="flush new table to disk for lower memory footprint",
-                        action="store_true")
-    parser.add_argument("--noflush", help="run with higer memory footprint",
-                        action="store_true")
-
+    parser = argparse.ArgumentParser(
+        description="Create a unfied data file from daily dumps"
+    )
+    parser.add_argument(
+        "files",
+        metavar="fileName",
+        type=str,
+        nargs="+",
+        help=".NPGEO COVID19 Germany data as .csv file",
+    )
+    parser.add_argument("-d", "--output-dir", dest="outputDir", default=".")
+    parser.add_argument(
+        "--flushmemfull",
+        help="flush full table to disk for lower memory footprint",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--flushmemnew",
+        help="flush new table to disk for lower memory footprint",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--noflush", help="run with higer memory footprint", action="store_true"
+    )
 
     args = parser.parse_args()
     print(args)
-    print("args.flushmemfull",args.flushmemfull)
-    print("args.flushmemnew",args.flushmemnew)
-    print("args.noflush",args.noflush)
+    print("args.flushmemfull", args.flushmemfull)
+    print("args.flushmemnew", args.flushmemnew)
+    print("args.noflush", args.noflush)
 
     fullTable = None
-    jayPath = args.outputDir+"/all-data.jay"
+    jayPath = args.outputDir + "/all-data.jay"
     print(jayPath)
     pmu.printMemoryUsage("after start")
 
@@ -344,7 +424,11 @@ def main():
         print("Loading " + jayPath)
         fullTable = dt.fread(jayPath)
         pmu.printMemoryUsage("after load")
-        daysIncluded = sorted(fullTable[:, [dt.first(dt.f.DatenstandTag)],dt.by(dt.f.DatenstandTag)].to_list()[0])
+        daysIncluded = sorted(
+            fullTable[
+                :, [dt.first(dt.f.DatenstandTag)], dt.by(dt.f.DatenstandTag)
+            ].to_list()[0]
+        )
         print("Days in full table:")
         print(daysIncluded)
         pmu.printMemoryUsage("after first query")
@@ -361,12 +445,12 @@ def main():
                 print("Hashing " + f)
                 newTable = unify(t)
                 pmu.printMemoryUsage("after hashing")
-                save(newTable,f,args.outputDir)
+                save(newTable, f, args.outputDir)
                 pmu.printMemoryUsage("after newTable save")
                 if fullTable is None:
                     fullTable = newTable
                 else:
-                    #print("full fields", fullTable.names)
+                    # print("full fields", fullTable.names)
                     checkColumns(fullTable.names, newTable.names)
                     pmu.printMemoryUsage("after checkColumns")
                     if args.flushmemfull:
@@ -382,29 +466,37 @@ def main():
                         pmu.printMemoryUsage("before fulltable rbind (flush)")
                         fullTable = fullTable.rbind(newTable)  # memory gets used here
 
-                    #fullTable = newTable.rbind(fullTable) # memory gets used here
-                    #fullTable = fullTable.rbind(newTable) # memory gets used here
+                    # fullTable = newTable.rbind(fullTable) # memory gets used here
+                    # fullTable = fullTable.rbind(newTable) # memory gets used here
                     pmu.printMemoryUsage("after rbind")
                 ffinish = time.perf_counter()
                 secs = ffinish - fstart
-                print("-> File time {:.1f} secs or {:.1f} mins or {:.1f} hours".format(secs, secs/60, secs/60/60))
+                print(
+                    "-> File time {:.1f} secs or {:.1f} mins or {:.1f} hours".format(
+                        secs, secs / 60, secs / 60 / 60
+                    )
+                )
     pmu.printMemoryUsage("before full save")
     pmu.saveJayTable(fullTable, "all-data.jay", args.outputDir)
     pmu.printMemoryUsage("after full save")
-    #pmu.saveCsvTable(fullTable, "all-data.csv", args.outputDir)
+    # pmu.saveCsvTable(fullTable, "all-data.csv", args.outputDir)
     finish = time.perf_counter()
     secs = finish - start
-    print("--> Wall time {:.1f} secs or {:.1f} mins or {:.1f} hours".format(secs, secs/60, secs/60/60))
+    print(
+        "--> Wall time {:.1f} secs or {:.1f} mins or {:.1f} hours".format(
+            secs, secs / 60, secs / 60 / 60
+        )
+    )
+
 
 if __name__ == "__main__":
     # execute only if run as a script
     main()
 
 
-
-'''
+"""
 Tue Mar  9 18:15:46 CET 2021
 Memory Usage @ after full save: 28.922 GB
 Tue Mar  9 19:08:01 CET 2021
 
-'''
+"""
