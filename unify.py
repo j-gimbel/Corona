@@ -462,7 +462,6 @@ def main():
     print("args.inMemory",args.inMemory)
     print("args.materializeNew",args.materializeNew)
     print("args.noMaterialize",args.noMaterialize)
-
     fullTable = None
     jayPath = args.outputDir + "/all-data.jay"
     print(jayPath)
@@ -481,7 +480,7 @@ def main():
         print("Days in full table:")
         print(daysIncluded)
         pmu.printMemoryUsage("after first query")
-
+        
     for fa in args.files:
         files = sorted(glob.glob(fa))
         for f in files:
