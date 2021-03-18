@@ -5,7 +5,7 @@
 
 # pip install Click==7.0 Flask==1.1.1 itsdangerous==1.1.0 Jinja2==2.10.3 MarkupSafe==1.1.1 uWSGI==2.0.18 Werkzeug==0.16.0 dash=1.11.0
 # pip install Click Flask itsdangerous Jinja2 MarkupSafe uWSGI Werkzeug matplotlib dash pandas datatable feather-format dash=1.11.0
-# pip install: matplotlib dash pandas datatable feather-format
+# pip install: matplotlib dash pandas datatable feather-format psutil
 
 import locale
 
@@ -36,7 +36,7 @@ import dash_table.FormatTemplate as FormatTemplate
 import socket
 import time
 
-versionStr="0.9.18"
+versionStr="1.0.2.0"
 
 # = socket.gethostname().startswith('pavlator')
 debugFlag = False
@@ -162,16 +162,16 @@ def clip(table, colName, maxValue):
     return table
 
 def getTableForDay(fullTable, day):
-    #sortColumns = ["Risk","LetzteMeldung","InzidenzFallNeu-7-Tage"]
-    sortColumns = ["Kontaktrisiko","InzidenzFallNeu-7-Tage"]
+    #sortColumns = ["Risk","LetzteMeldung","InzidenzFallNeu_7_Tage"]
+    sortColumns = ["Kontaktrisiko","InzidenzFallNeu_7TageSumme"]
     todayTable = getRankedTable(fullTable, day, sortColumns)
     yesterdayTable = getRankedTable(fullTable, day-1, sortColumns)
-    print(todayTable)
-    print(yesterdayTable)
+    #print(todayTable)
+    #print(yesterdayTable)
     todayTableById = todayTable.sort("IdLandkreis")
     yesterdayTableById = yesterdayTable.sort("IdLandkreis")
-    print(todayTableById.nrows)
-    print(yesterdayTableById.nrows)
+    #print(todayTableById.nrows)
+    #print(yesterdayTableById.nrows)
 
     # check if all entries today and yesterday do match
     for i in range(yesterdayTableById.nrows):
@@ -215,388 +215,13 @@ def getTableForDay(fullTable, day):
     todayTableById = todayTableById.sort("Rang")
 
     todayTableById[dt.f.Kontaktrisiko * 2 == dt.f.Kontaktrisiko, "Kontaktrisiko"] = 99999
-    clip(todayTableById, "InzidenzFallNeu-Tage-bis-50", 9999.9)
-    clip(todayTableById, "InzidenzFallNeu-Tage-bis-100", 9999.9)
-    clip(todayTableById, "InzidenzFallNeu-Prognose-4-Wochen", 9999.9)
-    clip(todayTableById, "InzidenzFallNeu-Prognose-8-Wochen", 9999.9)
+    clip(todayTableById, "InzidenzFallNeu_Tage_bis_50", 9999.9)
+    clip(todayTableById, "InzidenzFallNeu_Tage_bis_100", 9999.9)
+    clip(todayTableById, "InzidenzFallNeu_Prognose_4_Wochen", 9999.9)
+    clip(todayTableById, "InzidenzFallNeu_Prognose_8_Wochen", 9999.9)
 
     return todayTableById
 
-
-# def processData(fullCurrentTable, forDay):
-#
-#     fullTable = fullCurrentTable[(dt.f.newCaseOnDay <= forDay) | (dt.f.newCaseBeforeDay < forDay),:]
-#
-#     #lastDay = fullTable[:, 'MeldeDay'].max()[0, 0]
-#     #lastnewCaseOnDay = fullTable[:, 'newCaseOnDay'].max()[0, 0]
-#
-#     alldays=fullTable[:,
-#               [dt.sum(dt.f.AnzahlFall),
-#                dt.sum(dt.f.FaellePro100k),
-#                dt.sum(dt.f.AnzahlTodesfall),
-#                dt.sum(dt.f.TodesfaellePro100k),
-#                dt.first(dt.f.Bevoelkerung),
-#                dt.max(dt.f.MeldeDay),
-#                dt.max(dt.f.newCaseOnDay),
-#                dt.first(dt.f.LandkreisTyp),
-#                dt.first(dt.f.IdLandkreis),
-#                dt.first(dt.f.IdBundesland),
-#                dt.first(dt.f.Bundesland)],
-#     dt.by(dt.f.Landkreis)]
-#
-#     #print(alldays)
-#     # compute and add rows for Bundeslaender
-#     bevoelkerung = alldays[:, [dt.sum(dt.f.Bevoelkerung), dt.sum(dt.f.AnzahlFall), dt.sum(dt.f.AnzahlTodesfall),], dt.by(dt.f.Bundesland)]
-#     bevoelkerung=bevoelkerung[:,dt.f[:].extend({"FaellePro100k": dt.f.AnzahlFall * 100000 / dt.f.Bevoelkerung})]
-#     bevoelkerung=bevoelkerung[:,dt.f[:].extend({"TodesfaellePro100k": dt.f.AnzahlTodesfall * 100000 / dt.f.Bevoelkerung})]
-#
-#     alldaysBundeslaender = fullTable[:,
-#               [dt.sum(dt.f.AnzahlFall),
-#                dt.first(dt.f.FaellePro100k), # just create the column, will be overwritten
-#                dt.sum(dt.f.AnzahlTodesfall),
-#                dt.first(dt.f.TodesfaellePro100k), # just create the column, will be overwritten
-#                dt.first(dt.f.Bevoelkerung), # just create the column, will be overwritten
-#                dt.max(dt.f.MeldeDay),
-#                dt.max(dt.f.newCaseOnDay),
-#                dt.first(dt.f.LandkreisTyp), # just create the column, will be overwritten
-#                dt.first(dt.f.IdLandkreis),
-#                dt.first(dt.f.IdBundesland),
-#                dt.first(dt.f.Landkreis)],
-#             dt.by(dt.f.Bundesland)]
-#
-#     alldaysBundeslaender[:, "Bevoelkerung"] = bevoelkerung[:, "Bevoelkerung"]
-#     alldaysBundeslaender[:, "Landkreis"] = bevoelkerung[:, "Bundesland"]
-#     alldaysBundeslaender[:, "FaellePro100k"] = bevoelkerung[:, "FaellePro100k"]
-#     alldaysBundeslaender[:, "TodesfaellePro100k"] = bevoelkerung[:, "TodesfaellePro100k"]
-#     alldaysBundeslaender[:, "LandkreisTyp"] = "B"
-#     #print(alldaysBundeslaender[:, "IdLandkreis"])
-#     alldaysBundeslaender[:, "IdLandkreis"] = alldaysBundeslaender[:, "IdBundesland"]
-#     #print(alldaysBundeslaender[:, ["IdLandkreis","Bundesland"]])
-#     alldays.rbind(alldaysBundeslaender, force=True)
-#
-#     # compute and add row for all Germany
-#     bevoelkerungGermany = alldays[dt.f.Landkreis != dt.f.Bundesland, [dt.sum(dt.f.Bevoelkerung), dt.sum(dt.f.AnzahlFall), dt.sum(dt.f.AnzahlTodesfall)]]
-#     bevoelkerungGermany = bevoelkerungGermany[:,
-#                           dt.f[:].extend({"FaellePro100k": dt.f.AnzahlFall * 100000 / dt.f.Bevoelkerung})]
-#     bevoelkerungGermany = bevoelkerungGermany[:,
-#                           dt.f[:].extend({"TodesfaellePro100k": dt.f.AnzahlTodesfall * 100000 / dt.f.Bevoelkerung})]
-#
-#     alldaysGermany = fullTable[dt.f.Landkreis != dt.f.Bundesland,
-#                      [dt.sum(dt.f.AnzahlFall),
-#                       dt.first(dt.f.FaellePro100k),  # just create the column, will be overwritten
-#                       dt.sum(dt.f.AnzahlTodesfall),
-#                       dt.first(dt.f.TodesfaellePro100k),  # just create the column, will be overwritten
-#                       dt.first(dt.f.Bevoelkerung),  # just create the column, will be overwritten
-#                       dt.max(dt.f.MeldeDay),
-#                       dt.max(dt.f.newCaseOnDay),
-#                       dt.first(dt.f.LandkreisTyp),  # just create the column, will be overwritten
-#                       dt.first(dt.f.Landkreis),
-#                       dt.first(dt.f.IdLandkreis),
-#                       dt.first(dt.f.IdBundesland),
-#                       dt.first(dt.f.Bundesland)]]
-#     alldaysGermany[:, "Bevoelkerung"] = bevoelkerungGermany[:, "Bevoelkerung"]
-#     alldaysGermany[:, "Landkreis"] = "Deutschland"
-#     alldaysGermany[:, "Bundesland"] = "Deutschland"
-#     alldaysGermany[:, "FaellePro100k"] = bevoelkerungGermany[:, "FaellePro100k"]
-#     alldaysGermany[:, "TodesfaellePro100k"] = bevoelkerungGermany[:, "TodesfaellePro100k"]
-#     alldaysGermany[:, "LandkreisTyp"] = "BR"
-#     alldaysGermany[:, "IdLandkreis"] = 0
-#     alldaysGermany[:, "IdBundesland"] = 0
-#     alldays.rbind(alldaysGermany, force=True)
-#
-#     ##############################################################################
-#     # compute values for last 7 days for Landkreise
-#     last7daysRecs = fullTable[((dt.f.newCaseOnDay > forDay - 7) & (dt.f.MeldeDay > forDay - 14)) | (dt.f.newDeathOnDay > forDay - 7), :]
-#     strictLast7daysRecs = fullTable[((dt.f.newCaseOnDay > forDay - 7) & (dt.f.MeldeDay > forDay - 7)) | (dt.f.newDeathOnDay > forDay - 7), :]
-#     #last7daysRecs.to_csv("last7daysRecs.csv")
-#     last7days = last7daysRecs[:,
-#                 [dt.sum(dt.f.AnzahlFall),
-#                dt.sum(dt.f.FaellePro100k),
-#                dt.sum(dt.f.AnzahlTodesfall),
-#                dt.sum(dt.f.TodesfaellePro100k)],
-#                 dt.by(dt.f.Landkreis)]
-#     last7days.names=["Landkreis","AnzahlFallLetzte7Tage","FaellePro100kLetzte7Tage","AnzahlTodesfallLetzte7Tage",
-#                      "TodesfaellePro100kLetzte7Tage"]
-#
-#     strictLast7days = strictLast7daysRecs[:,
-#                 [dt.sum(dt.f.AnzahlFall),
-#                  dt.sum(dt.f.FaellePro100k)],
-#                 dt.by(dt.f.Landkreis)]
-#     strictLast7days.names = ["Landkreis", "AnzahlFallLetzte7TageStrikt", "FaellePro100kLetzte7TageStrikt"]
-#     #print(strictLast7days)
-#     last7days = join(last7days,strictLast7days, "Landkreis" )
-#     #print(last7days)
-#
-#     # compute values for last 7 days for Bundesländer
-#     last7daysBL = last7daysRecs[:,
-#                 [dt.sum(dt.f.AnzahlFall),
-#                  dt.sum(dt.f.AnzahlTodesfall),
-#                  dt.sum(dt.f.Bevoelkerung)],
-#                   dt.by(dt.f.Bundesland)]
-#     last7daysBL.names = ["Landkreis", "AnzahlFallLetzte7Tage", "AnzahlTodesfallLetzte7Tage","Bevoelkerung"]
-#     strictLast7daysBL = strictLast7daysRecs[:,
-#                 [dt.sum(dt.f.AnzahlFall),
-#                  dt.sum(dt.f.Bevoelkerung)],
-#                   dt.by(dt.f.Bundesland)]
-#     strictLast7daysBL.names = ["Landkreis", "AnzahlFallLetzte7TageStrikt", "Bevoelkerung"]
-#
-#     bls = last7daysBL[:,"Landkreis"].to_list()[0]
-#     blb = bevoelkerung[:,"Bundesland"].to_list()[0]
-#     #print(bls)
-#     #print(blb)
-#     for i, bl in enumerate(bls):
-#         for j, bb in enumerate(blb):
-#             #print(i,j)
-#             if last7daysBL[i, "Landkreis"] == bevoelkerung[j, "Bundesland"]:
-#                 last7daysBL[i, "Bevoelkerung"] = bevoelkerung[j, "Bevoelkerung"]
-#             if strictLast7daysBL[i, "Landkreis"] == bevoelkerung[j, "Bundesland"]:
-#                 strictLast7daysBL[i, "Bevoelkerung"] = bevoelkerung[j, "Bevoelkerung"]
-#
-#     #last7daysBL[:, "Bevoelkerung"] = bevoelkerung[:, "Bevoelkerung"]
-#     last7daysBL = last7daysBL[:, dt.f[:].extend({"FaellePro100kLetzte7Tage": dt.f.AnzahlFallLetzte7Tage * 100000 / dt.f.Bevoelkerung})]
-#     last7daysBL = last7daysBL[:, dt.f[:].extend({"TodesfaellePro100kLetzte7Tage": dt.f.AnzahlTodesfallLetzte7Tage * 100000 / dt.f.Bevoelkerung})]
-#     #print(last7daysBL)
-#     last7days.rbind(last7daysBL, force=True)
-#     #print(last7days)
-#
-#     strictLast7daysBL = strictLast7daysBL[:,
-#                   dt.f[:].extend({"FaellePro100kLetzte7TageStrikt": dt.f.AnzahlFallLetzte7TageStrikt * 100000 / dt.f.Bevoelkerung})]
-#     strictLast7daysBL = strictLast7daysBL[:, ["Landkreis","AnzahlFallLetzte7TageStrikt","FaellePro100kLetzte7TageStrikt"]]
-#     #print(strictLast7daysBL)
-#     last7days = merge(last7days,strictLast7daysBL, "Landkreis" )
-#     #print(last7days)
-#
-#     # compute values for last 7 days for Germany
-#     last7daysDE = last7daysRecs[:,
-#                   [dt.first(dt.f.Landkreis),
-#                    dt.sum(dt.f.AnzahlFall),
-#                    dt.sum(dt.f.AnzahlTodesfall),
-#                    dt.first(dt.f.Bevoelkerung),
-#                    ]]
-#     last7daysDE.names = ["Landkreis", "AnzahlFallLetzte7Tage", "AnzahlTodesfallLetzte7Tage", "Bevoelkerung"]
-#     last7daysDE[:, "Landkreis"] = "Deutschland"
-#     last7daysDE[:, "Bevoelkerung"] = bevoelkerungGermany[:, "Bevoelkerung"]
-#     last7daysDE = last7daysDE[:,
-#                   dt.f[:].extend({"FaellePro100kLetzte7Tage": dt.f.AnzahlFallLetzte7Tage * 100000 / dt.f.Bevoelkerung})]
-#     last7daysDE = last7daysDE[:, dt.f[:].extend(
-#         {"TodesfaellePro100kLetzte7Tage": dt.f.AnzahlTodesfallLetzte7Tage * 100000 / dt.f.Bevoelkerung})]
-#
-#     #print(last7daysDE)
-#     last7days.rbind(last7daysDE, force=True)
-#
-#     strictLast7daysDE = strictLast7daysRecs[:,
-#                   [dt.first(dt.f.Landkreis),
-#                    dt.sum(dt.f.AnzahlFall),
-#                    dt.first(dt.f.Bevoelkerung),
-#                    ]]
-#     strictLast7daysDE.names = ["Landkreis", "AnzahlFallLetzte7TageStrikt", "Bevoelkerung"]
-#     strictLast7daysDE[:, "Landkreis"] = "Deutschland"
-#     strictLast7daysDE[:, "Bevoelkerung"] = bevoelkerungGermany[:, "Bevoelkerung"]
-#     strictLast7daysDE = strictLast7daysDE[:,
-#                   dt.f[:].extend({"FaellePro100kLetzte7TageStrikt": dt.f.AnzahlFallLetzte7TageStrikt * 100000 / dt.f.Bevoelkerung})]
-#     last7days = merge(last7days,strictLast7daysDE, "Landkreis" )
-#
-#     last7days = last7days[:, dt.f[:].extend({"FaelleLetzte7TageDropped": dt.f.AnzahlFallLetzte7Tage - dt.f.AnzahlFallLetzte7TageStrikt})]
-#     last7days = last7days[:, dt.f[:].extend({"FaelleLetzte7TageDroppedPercent": dt.f.FaelleLetzte7TageDropped * 100/dt.f.AnzahlFallLetzte7Tage})]
-#
-#     # clip case count to zero
-#     last7days[dt.f.AnzahlFallLetzte7Tage <0, "AnzahlFallLetzte7Tage"] = 0
-#     last7days[dt.f.FaellePro100kLetzte7Tage <0, "FaellePro100kLetzte7Tage"] = 0
-#     last7days[dt.f.AnzahlTodesfallLetzte7Tage <0, "AnzahlTodesfallLetzte7Tage"] = 0
-#     last7days[dt.f.TodesfaellePro100kLetzte7Tage <0, "TodesfaellePro100kLetzte7Tage"] = 0
-#
-#     last7days[dt.f.AnzahlFallLetzte7TageStrikt < 0, "AnzahlFallLetzte7TageStrikt"] = 0
-#     last7days[dt.f.FaellePro100kLetzte7TageStrikt < 0, "FaellePro100kLetzte7TageStrikt"] = 0
-#     last7days[dt.f.FaelleLetzte7TageDropped < 0, "FaelleLetzte7TageDropped"] = 0
-#     last7days[dt.f.FaelleLetzte7TageDroppedPercent < 0, "FaelleLetzte7TageDroppedPercent"] = 0
-#
-#     ##############################################################################
-#     # compute values for last 7 days before 7 days
-#
-#     lastWeek7daysRecs = fullTable[((dt.f.newCaseOnDay > forDay - 14) & (dt.f.newCaseOnDay <= forDay - 7)
-#                                    & (dt.f.MeldeDay > forDay - 21) & (dt.f.MeldeDay <= forDay - 7)) |
-#                                   ((dt.f.newDeathOnDay > forDay - 14) & (dt.f.newDeathOnDay <= forDay - 7))
-#                                   , :]
-#     lastWeek7days=lastWeek7daysRecs[:,
-#                     [dt.sum(dt.f.AnzahlFall),
-#                dt.sum(dt.f.FaellePro100k),
-#                dt.sum(dt.f.AnzahlTodesfall),
-#                dt.sum(dt.f.TodesfaellePro100k)],
-#        dt.by(dt.f.Landkreis)]
-#     #lastWeek7days[dt.f[1:] < 0, dt.f[1:]] = 0
-#     lastWeek7days.names=["Landkreis","AnzahlFallLetzte7TageDavor","FaellePro100kLetzte7TageDavor",
-#                          "AnzahlTodesfallLetzte7TageDavor","TodesfaellePro100kLetzte7TageDavor"]
-#
-#     # compute values for last 7 days before 7 days for Bundesländer
-#     lastWeek7daysBL = lastWeek7daysRecs[:,
-#                   [dt.sum(dt.f.AnzahlFall),
-#                    dt.sum(dt.f.AnzahlTodesfall),
-#                    dt.sum(dt.f.Bevoelkerung)],
-#                   dt.by(dt.f.Bundesland)]
-#     lastWeek7daysBL.names = ["Landkreis", "AnzahlFallLetzte7TageDavor", "AnzahlTodesfallLetzte7TageDavor", "Bevoelkerung"]
-#
-#     bls = lastWeek7daysBL[:,"Landkreis"].to_list()[0]
-#     blb = bevoelkerung[:, "Bundesland"].to_list()[0]
-#     # print(bls)
-#     # print(blb)
-#     for i, bl in enumerate(bls):
-#         for j, bb in enumerate(blb):
-#             # print(i,j)
-#             if lastWeek7daysBL[i, "Landkreis"] == bevoelkerung[j, "Bundesland"]:
-#                 lastWeek7daysBL[i, "Bevoelkerung"] = bevoelkerung[j, "Bevoelkerung"]
-#
-#     #lastWeek7daysBL[:, "Bevoelkerung"] = bevoelkerung[:, "Bevoelkerung"]
-#     lastWeek7daysBL = lastWeek7daysBL[:, dt.f[:].extend({"FaellePro100kLetzte7TageDavor": dt.f.AnzahlFallLetzte7TageDavor * 100000 / dt.f.Bevoelkerung})]
-#     lastWeek7daysBL = lastWeek7daysBL[:, dt.f[:].extend({"TodesfaellePro100kLetzte7TageDavor": dt.f.AnzahlTodesfallLetzte7TageDavor * 100000 / dt.f.Bevoelkerung})]
-#     lastWeek7days.rbind(lastWeek7daysBL, force=True)
-#
-#     # compute values for last 7 days for Germany
-#     lastWeek7daysDE = lastWeek7daysRecs[:,
-#                   [dt.first(dt.f.Landkreis),
-#                    dt.sum(dt.f.AnzahlFall),
-#                    dt.sum(dt.f.AnzahlTodesfall),
-#                    dt.first(dt.f.Bevoelkerung),
-#                    ]]
-#     lastWeek7daysDE.names = ["Landkreis", "AnzahlFallLetzte7TageDavor", "AnzahlTodesfallLetzte7TageDavor", "Bevoelkerung"]
-#     lastWeek7daysDE[:, "Landkreis"] = "Deutschland"
-#     lastWeek7daysDE[:, "Bevoelkerung"] = bevoelkerungGermany[:, "Bevoelkerung"]
-#     lastWeek7daysDE = lastWeek7daysDE[:,
-#                   dt.f[:].extend({"FaellePro100kLetzte7TageDavor": dt.f.AnzahlFallLetzte7TageDavor * 100000 / dt.f.Bevoelkerung})]
-#     lastWeek7daysDE = lastWeek7daysDE[:, dt.f[:].extend(
-#         {"TodesfaellePro100kLetzte7TageDavor": dt.f.AnzahlTodesfallLetzte7TageDavor * 100000 / dt.f.Bevoelkerung})]
-#     lastWeek7days.rbind(lastWeek7daysDE, force=True)
-#
-#     ##############################################################################
-#     # compute delays
-#     firstRecordTime = time.strptime("29.4.2020", "%d.%m.%Y")  # struct_time
-#     firstRecordDay = cd.dayFromTime(firstRecordTime)
-#     firstRecordDay = forDay - 21
-#
-#     delayRecs = fullTable[(dt.f.newCaseOnDay > firstRecordDay) | (dt.f.newDeathOnDay > firstRecordDay), :]
-#     delayRecs.materialize()
-#     #print(delayRecs)
-#     #delayRecs.to_csv("delayRecs.csv")
-#     delays = delayRecs[:, [dt.mean(dt.f.MeldeDelay), dt.median(dt.f.MeldeDelay), dt.sd(dt.f.MeldeDelay), dt.sum(dt.f.AnzahlFall)], dt.by(dt.f.Landkreis)]
-#     delays.names = ["Landkreis", "DelayMean", "DelayMedian", "DelaySD", "DelayAnzahlFall"]
-#
-#     delaysBL = delayRecs[:, [dt.mean(dt.f.MeldeDelay), dt.median(dt.f.MeldeDelay), dt.sd(dt.f.MeldeDelay), dt.sum(dt.f.AnzahlFall)], dt.by(dt.f.Bundesland)]
-#     delaysBL.names = ["Landkreis", "DelayMean", "DelayMedian", "DelaySD", "DelayAnzahlFall"]
-#     delays.rbind(delaysBL)
-#
-#     delaysDE = delayRecs[:, [dt.first(dt.f.Landkreis), dt.mean(dt.f.MeldeDelay), dt.median(dt.f.MeldeDelay), dt.sd(dt.f.MeldeDelay), dt.sum(dt.f.AnzahlFall)]]
-#     delaysDE.names = ["Landkreis", "DelayMean", "DelayMedian", "DelaySD", "DelayAnzahlFall"]
-#     delaysDE[:, "Landkreis"] = "Deutschland"
-#     delays.rbind(delaysDE)
-#
-#     #print(delaysBL)
-#
-#     alldays = join(alldays, delays, "Landkreis")
-#     ##############################################################################
-#
-#     # clip case count to zero
-#     lastWeek7days[dt.f.AnzahlFallLetzte7TageDavor <0, "AnzahlFallLetzte7TageDavor"] = 0
-#     lastWeek7days[dt.f.FaellePro100kLetzte7TageDavor <0, "FaellePro100kLetzte7TageDavor"] = 0
-#     lastWeek7days[dt.f.AnzahlTodesfallLetzte7TageDavor <0, "AnzahlTodesfallLetzte7TageDavor"] = 0
-#     lastWeek7days[dt.f.TodesfaellePro100kLetzte7TageDavor <0, "TodesfaellePro100kLetzte7TageDavor"] = 0
-#
-#     allDaysExt0 = join(alldays, last7days, "Landkreis")
-#     allDaysExt1 = join(allDaysExt0, lastWeek7days, "Landkreis")
-#
-#     Rw = (dt.f.AnzahlFallLetzte7Tage+5)/(dt.f.AnzahlFallLetzte7TageDavor + 5)
-#
-#     allDaysExt2=allDaysExt1[:,dt.f[:].extend({"AnzahlFallTrend":  Rw})]
-#
-#     #RwSqrt = (dt.math.sqrt(dt.f.AnzahlFallTrend))
-#     RwSqrt = (dt.math.pow(dt.f.AnzahlFallTrend, 4/7))
-#     allDaysExt2=allDaysExt2[:,dt.f[:].extend({"AnzahlFallTrendSqrt":  RwSqrt})]
-#     allDaysExt3=allDaysExt2[:,dt.f[:].extend({"FaellePro100kTrend": dt.f.FaellePro100kLetzte7Tage-dt.f.FaellePro100kLetzte7TageDavor})]
-#     allDaysExt3=allDaysExt3[:,dt.f[:].extend({"FaellePro100kPrognose": dt.f.FaellePro100kLetzte7Tage*dt.math.pow(dt.f.AnzahlFallTrend, 4)})]
-#     allDaysExt3=allDaysExt3[:,dt.f[:].extend({"FaellePro100kPrognose2": dt.f.FaellePro100kLetzte7Tage*dt.math.pow(dt.f.AnzahlFallTrend, 8)})]
-#
-#     # res = cur * trend ^ t
-#     # trend ^ t = res/cur
-#     # t = log(trend, res/cur)
-#     # t = ln(res/cur)/ln(trend)
-#
-#     allDaysExt3=allDaysExt3[:,dt.f[:].extend({"FaellePro100kTageBisSicher": dt.math.log(3/dt.f.FaellePro100kLetzte7Tage) / dt.math.log(dt.f.AnzahlFallTrend) * 7})]
-#     allDaysExt3=allDaysExt3[:,dt.f[:].extend({"FaellePro100kTageBisSicher2": dt.math.log(7/dt.f.FaellePro100kLetzte7Tage) / dt.math.log(dt.f.AnzahlFallTrend) * 7})]
-#
-#     allDaysExt4=allDaysExt3[:,dt.f[:].extend({"TodesfaellePro100kTrend": dt.f.TodesfaellePro100kLetzte7Tage-dt.f.TodesfaellePro100kLetzte7TageDavor})]
-#
-#     allDaysExt5=allDaysExt4[:,dt.f[:].extend({"Kontaktrisiko": dt.f.Bevoelkerung/3.5/((dt.f.AnzahlFallLetzte7Tage+dt.f.AnzahlFallLetzte7TageDavor)*Rw)})]
-#     allDaysExt6 = allDaysExt5[:, dt.f[:].extend({"LetzteMeldung": forDay - dt.f.MeldeDay})]
-#     allDaysExt6b = allDaysExt6[:, dt.f[:].extend({"LetzteMeldungNeg": dt.f.MeldeDay - forDay})]
-#     allDaysExt6c = allDaysExt6b[:, dt.f[:].extend({"LetzteZaehlungNeg": dt.f.newCaseOnDay - forDay})]
-#     datenStand = cd.dateStrYMDFromDay(forDay+1)
-#     allDaysExt6c = allDaysExt6c[:, dt.f[:].extend({"Datenstand": datenStand})]
-#     allDaysExt6c = allDaysExt6c[:, dt.f[:].extend({"Sofwareversion": versionStr})]
-#
-#     allDaysExt6c[dt.f.Kontaktrisiko * 2 == dt.f.Kontaktrisiko, "Kontaktrisiko"] = 99999
-#     allDaysExt6c[dt.f.FaellePro100kPrognose >= 10000, "FaellePro100kPrognose"] = 9999.9
-#     allDaysExt6c[dt.f.FaellePro100kPrognose2 >= 10000, "FaellePro100kPrognose2"] = 9999.9
-#
-#     sortedByRisk = allDaysExt6c.sort(["Kontaktrisiko","LetzteMeldung","FaellePro100k"])
-#     #print(sortedByRisk)
-#     allDaysExt=sortedByRisk[:,dt.f[:].extend({"Rang": 0})]
-#     allDaysExt[:,"Rang"]=np.arange(1,allDaysExt.nrows+1)
-#     #print(allDaysExt)
-#     #allDaysExt.materialize()
-#     return allDaysExt
-#
-# def loadAndProcessData(fileName):
-#     currentFullTable, lastDay = loadData(fileName)
-#     todayTable = processData(currentFullTable, lastDay).sort("Landkreis")
-#     yesterdayTable = processData(currentFullTable, lastDay-1).sort("Landkreis")
-#
-#     #print(currentFullTable)
-#     #print(todayTable)
-#     #print(yesterdayTable)
-#
-#     resultTable = todayTable[:, dt.f[:].extend({"NewCasesToday": 0})]
-#     change = np.subtract(todayTable[:, "AnzahlFall"],yesterdayTable[:, "AnzahlFall"])
-#     resultTable[:, "NewCasesToday"] = change
-#
-#     for i in range(yesterdayTable.nrows):
-#         l_name = todayTable[i, dt.f.Landkreis].to_list()[0][0]
-#         #l_id = todayTable[i, dt.f.IdLandkreis].to_list()[0][0]
-#         l_new_name = yesterdayTable[i, dt.f.Landkreis].to_list()[0][0]
-#         if l_name != l_new_name:
-#             print("missing {} in today, was {} yesterday".format(l_name, l_new_name))
-#             exit(1)
-#         #else:
-#         #    print("{}: ok: {}".format(i, l_name))
-#
-#     resultTable=resultTable[:,dt.f[:].extend({"RangChange": 0})]
-#     rangChange = np.subtract(yesterdayTable[:,"Rang"],todayTable[:,"Rang"])
-#     resultTable[:,"RangChange"] = rangChange
-#
-#     resultTable=resultTable[:,dt.f[:].extend({"RangYesterday": 0})]
-#     resultTable[:,"RangYesterday"] = yesterdayTable[:,"Rang"]
-#
-#     resultTable=resultTable[:,dt.f[:].extend({"RangChangeStr": "-"})]
-#
-#     rangChangeStrs = np.full(len(rangChange), "*")
-#     for i, rc in enumerate(rangChange):
-#         #print(i, rc)
-#
-#         rangChangeStr = ""
-#         if rc > 0:
-#             rangChangeStr = "▲"
-#         if rc < 0:
-#             rangChangeStr = "▼"
-#
-#         resultTable[i, "RangChangeStr"] = rangChangeStr
-#         rangChangeStrs[i] = rangChangeStr
-#
-#     #print(rangChangeStrs)
-#
-#     #print("Column names frame order:", list(enumerate(resultTable.names)))
-#     resultTable2 = resultTable.sort("Rang")
-#     #print(resultTable2)
-#     data = resultTable2.to_pandas()
-#     #print(data)
-#
-#     return data
 
 defaultColWidth=70
 #charWidth=7
@@ -619,37 +244,46 @@ def makeColumns():
         ('Bundesland', ['Region', 'Land'], 'text', Format(), colWidth(190)),
         ('LandkreisTyp', ['Region', 'Art'], 'text', Format(), colWidth(30)),
         ('Einwohner', ['Region', 'Einwohner'], 'numeric', FormatInt, colWidth(90)),
-        ('InzidenzFallNeu-7-Tage-Trend-Spezial', ['Fälle', 'RwK'], 'numeric', FormatFixed2, colWidth(70)),
-        ('InzidenzFallNeu-7-Tage-R', ['Fälle', 'R7'], 'numeric', FormatFixed2, colWidth(70)),
-        ('AnzahlFallNeu-7-Tage', ['Fälle', 'letzte 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
-        ('AnzahlFallNeu-7-Tage-7-Tage-davor', ['Fälle', 'vorl. 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
-        ('AnzahlFall', ['Fälle', 'total'], 'numeric', FormatInt, colWidth(90)),
-        ('AnzahlFallNeu', ['Fälle', 'neu'], 'numeric', FormatInt, colWidth(defaultColWidth)),
-        ('InzidenzFallNeu-7-Tage', ['Fälle je 100.000', 'letzte 7 Tage'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
-        ('InzidenzFallNeu-7-Tage-7-Tage-davor', ['Fälle je 100.000', 'vorl. 7 Tage'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
-        #('FaellePro100kTrend', ['Fälle je 100.000', 'Diff.'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
-        ('InzidenzFall', ['Fälle je 100.000', 'total'], 'numeric', FormatFixed1, colWidth(60)),
-        ('InzidenzFallNeu-Prognose-4-Wochen', ['Fälle je 100.000', 'in 4 Wochen'], 'numeric', FormatFixed1, colWidth(60)),
-        ('InzidenzFallNeu-Prognose-8-Wochen', ['Fälle je 100.000', 'in 8 Wochen'], 'numeric', FormatFixed1, colWidth(60)),
-        ('InzidenzFallNeu-Tage-bis-50', ['Fälle je 100.000', 'Tage bis 50'], 'numeric', FormatInt, colWidth(60)),
-        ('InzidenzFallNeu-Tage-bis-100', ['Fälle je 100.000', 'Tage bis 100'], 'numeric', FormatInt, colWidth(60)),
-        ('AnzahlFallLetzte7TageStrikt', ['Fälle strikt 7 Tage', 'absolut'], 'numeric', FormatInt, colWidth(defaultColWidth)),
-        ('FaellePro100kLetzte7TageStrikt', ['Fälle strikt 7 Tage', 'je 100.000'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
-        ('FaelleLetzte7TageDropped', ['Fälle strikt 7 Tage', 'RKI ignoriert'], 'numeric', FormatInt, colWidth(defaultColWidth)),
-        ('FaelleLetzte7TageDroppedPercent', ['Fälle strikt 7 Tage', 'RKI ignoriert %'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
-        ('LetzteMeldungNeg', ['Meldung', 'Letzte Meldung'], 'numeric', FormatInt, colWidth(70)),
-        ('LetzteZaehlungNeg', ['Meldung', 'Letzte Zählung'], 'numeric', FormatInt, colWidth(70)),
-        ('DelayMean', ['Meldeverzögerung (Tage)', 'Mittel x̅'], 'numeric', FormatFixed1, colWidth(62)),
-        ('DelayMedian', ['Meldeverzögerung (Tage)', 'Median x̃'], 'numeric', FormatInt, colWidth(62)),
-        ('DelaySD', ['Meldeverzögerung (Tage)', 'Stdabw. σx'], 'numeric', FormatFixed1, colWidth(62)),
-        ('DelayAnzahlFall', ['Meldeverzögerung (Tage)', 'Anzahl Fälle'], 'numeric', FormatInt, colWidth(62)),
-        ('AnzahlTodesfallNeu-7-Tage', ['Todesfälle', 'letzte 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
-        ('AnzahlTodesfallNeu-7-Tage-7-Tage-davor', ['Todesfälle', 'vorl. 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
+        ('InzidenzFallNeu_7TageSumme_Trend_Spezial', ['Publizierte Fälle', 'RwK'], 'numeric', FormatFixed2, colWidth(70)),
+        ('InzidenzFallNeu_7TageSumme_R', ['Publizierte Fälle', 'R7'], 'numeric', FormatFixed2, colWidth(70)),
+        ('AnzahlFallNeu_7TageSumme', ['Publizierte Fälle', 'letzte 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
+        ('AnzahlFallNeu_7TageSumme_7_Tage_davor', ['Publizierte Fälle', 'vorl. 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
+        ('AnzahlFall', ['Publizierte Fälle', 'total'], 'numeric', FormatInt, colWidth(90)),
+        ('AnzahlFallNeu', ['Publizierte Fälle', 'neu'], 'numeric', FormatInt, colWidth(defaultColWidth)),
+
+        ('InzidenzFallNeu_7TageSumme', ['Publizierte Fälle je 100.000', 'letzte 7 Tage'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
+        ('InzidenzFallNeu_7TageSumme_7_Tage_davor', ['Publizierte Fälle je 100.000', 'vorl. 7 Tage'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
+        ('InzidenzFall', ['Publizierte Fälle je 100.000', 'total'], 'numeric', FormatFixed1, colWidth(60)),
+        ('InzidenzFallNeu_Prognose_4_Wochen', ['Publizierte Fälle je 100.000', 'in 4 Wochen'], 'numeric', FormatFixed1, colWidth(60)),
+        ('InzidenzFallNeu_Prognose_8_Wochen', ['Publizierte Fälle je 100.000', 'in 8 Wochen'], 'numeric', FormatFixed1, colWidth(60)),
+        ('InzidenzFallNeu_Tage_bis_50', ['Publizierte Fälle je 100.000', 'Tage bis 50'], 'numeric', FormatInt, colWidth(60)),
+        ('InzidenzFallNeu_Tage_bis_100', ['Publizierte Fälle je 100.000', 'Tage bis 100'], 'numeric', FormatInt, colWidth(60)),
+
+        ('MeldeTag_AnzahlFallNeu_Gestern_7TageSumme', ['Fälle nach Meldedatum (RKI-Zählung)', 'letzte 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
+        ('MeldeTag_Vor7Tagen_AnzahlFallNeu_Vor8Tagen_7TageSumme', ['Fälle nach Meldedatum (RKI-Zählung)', 'vor 7 Tagen'], 'numeric', FormatInt, colWidth(defaultColWidth)),
+        ('MeldeTag_InzidenzFallNeu_Gestern_7TageSumme', ['Fälle nach Meldedatum (RKI-Zählung)', '7 Tage Inzidenz'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
+        ('MeldeTag_InzidenzFallNeu_Trend', ['Fälle nach Meldedatum (RKI-Zählung)', '7-Tage Faktor'], 'numeric', FormatFixed2, colWidth(70)),
+        ('MeldeTag_InzidenzFallNeu_R', ['Fälle nach Meldedatum (RKI-Zählung)', '7 Tage R-Wert'], 'numeric', FormatFixed2, colWidth(70)),
+        ('MeldeTag_InzidenzFallNeu_Prognose_4_Wochen', ['Fälle nach Meldedatum (RKI-Zählung)', 'Inzidenz in 4 Wochen'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
+
+        ('AnzahlFallNeu_7TageSumme_Dropped', ['Fälle nach Meldedatum (RKI-Zählung)', 'Diff. zu publ. Fällen'], 'numeric', FormatInt, colWidth(defaultColWidth)),
+        ('ProzentFallNeu_7TageSumme_Dropped', ['Fälle nach Meldedatum (RKI-Zählung)', '% zu publ. Fällen'], 'numeric', FormatFixed1, colWidth(defaultColWidth)),
+
+        ('DatenstandTag_Diff', ['Meldung', 'Letzte Zählung'], 'numeric', FormatInt, colWidth(70)),
+        ('PublikationsdauerFallNeu_Min_Neg', ['Meldung', 'Letzte Meldung'], 'numeric', FormatInt, colWidth(70)),
+        ('PublikationsdauerFallNeu_Max', ['Meldeverzögerung (Tage)', 'Max.'], 'numeric', FormatFixed1, colWidth(62)),
+        ('PublikationsdauerFallNeu_Schnitt', ['Meldeverzögerung (Tage)', 'Mittel x̅'], 'numeric', FormatFixed1, colWidth(62)),
+        ('PublikationsdauerFallNeu_Median', ['Meldeverzögerung (Tage)', 'Median x̃'], 'numeric', FormatInt, colWidth(62)),
+        ('PublikationsdauerFallNeu_StdAbw', ['Meldeverzögerung (Tage)', 'Stdabw. σx'], 'numeric', FormatFixed1, colWidth(62)),
+        ('PublikationsdauerFallNeu_Fallbasis', ['Meldeverzögerung (Tage)', 'Anzahl Fälle'], 'numeric', FormatInt, colWidth(62)),
+        ('AnzahlTodesfallNeu_7TageSumme', ['Todesfälle', 'letzte 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
+        ('AnzahlTodesfallNeu_7TageSumme_7_Tage_davor', ['Todesfälle', 'vorl. 7 Tage'], 'numeric', FormatInt, colWidth(defaultColWidth)),
         ('AnzahlTodesfall', ['Todesfälle', 'total'], 'numeric', FormatInt, colWidth(defaultColWidth)),
-        ('InzidenzTodesfallNeu-7-Tage', ['Todesfälle je 100.000', 'letzte 7 Tage'], 'numeric', FormatFixed2, colWidth(defaultColWidth)),
-        ('InzidenzTodesfallNeu-7-Tage-7-Tage-davor', ['Todesfälle je 100.000', 'vorl. 7 Tage'], 'numeric', FormatFixed2, colWidth(defaultColWidth)),
-        ('InzidenzTodesfallNeu-7-Tage-Trend-Spezial', ['Todesfälle je 100.000', 'Trend'], 'numeric', FormatFixed2, colWidth(defaultColWidth)),
-        ('InzidenzTodesfall', ['Todesfälle je 100.000', 'total'], 'numeric', FormatFixed2, colWidth(60)),
+        ('Fallsterblichkeit_Prozent', ['Todesfälle', 'CFR in %'], 'numeric', FormatFixed2, colWidth(62)),
+        ('InzidenzTodesfallNeu_7TageSumme', ['Todesfälle je 100.000', 'letzte 7 Tage'], 'numeric', FormatFixed2, colWidth(defaultColWidth)),
+        ('InzidenzTodesfallNeu_7TageSumme_7_Tage_davor', ['Todesfälle je 100.000', 'vorl. 7 Tage'], 'numeric', FormatFixed2, colWidth(defaultColWidth)),
+        ('InzidenzTodesfallNeu_7TageSumme_Trend_Spezial', ['Todesfälle je 100.000', 'Trend'], 'numeric', FormatFixed2, colWidth(defaultColWidth)),
+        ('InzidenzTodesfall', ['Todesfälle je 100.000', 'total'], 'numeric', FormatFixed2, colWidth(62)),
     ]
 
     orderedCols, orderedNames, orderedTypes, orderFormats, orderWidths = zip(*desiredOrder)
@@ -694,7 +328,7 @@ app = dash.Dash(
 
 # fullTableFilename = "full-latest.csv"
 # cacheFilename = "data-cached.feather"
-# dataFilename = "data.csv"
+dataFilename = "data.csv"
 #
 # FORCE_REFRESH_CACHE = debugFlag
 # #FORCE_REFRESH_CACHE = True
@@ -707,8 +341,11 @@ app = dash.Dash(
 #     print("Loading data cache from ‘"+cacheFilename+"‘")
 #     dframe = pd.read_feather(cacheFilename)
 #
-# csvData = open(dataFilename,"rb").read().decode('utf-8')
-# csvFullData = open(fullTableFilename,"rb").read().decode('utf-8')
+
+csvData = open(dataFilename,"rb").read().decode('utf-8')
+
+fullTableFilename="all-series.csv"
+csvFullData = open(fullTableFilename,"rb").read().decode('utf-8')
 
 dataURL = '/covid/risks/data.csv'
 
@@ -719,9 +356,9 @@ def csvResponse(data):
 
 @server.route(dataURL)
 def csv_data():
-    return csvResponse(csvData)
+     return csvResponse(csvData)
 
-fullDataURL = '/covid/risks/full-data.csv'
+fullDataURL = '/covid/risks/all-series.csv'
 @server.route(fullDataURL)
 def csv_fulldata():
     return csvResponse(csvFullData)
@@ -734,17 +371,18 @@ minWidthStr = colWidthStr(minWidth)
 maxWidthStr = colWidthStr(maxWidth)
 
 # load table
-fullTable = loadData("all-series.csv")
+fullTable = loadData(fullTableFilename)
 
 #maxDay = float(dframe["MeldeDay"].max())
 maxDay = fullTable[:,"DatenstandTag"].max().to_list()[0][0]
 print(maxDay)
-dataVersionDate = cd.dateStrWDMYFromDay(maxDay+1)
+dataVersionDate = cd.dateStrWDMYFromDay(maxDay)
 print("Loading done, max Day {} date {}".format(maxDay, dataVersionDate))
 
 print("Creating Datatable")
 
 table = getTableForDay(fullTable, maxDay)
+table.to_csv("data.csv")
 data = table.to_pandas().to_dict("records")
 
 # print("colWidths", colWidths)
@@ -757,15 +395,17 @@ colors = {
     'text': 'white'
 }
 
+conditionUltra="conditionUltra"
 conditionDanger="conditionDanger"
 conditionTooHigh="conditionTooHigh"
 conditionSerious="conditionSerious"
 conditionGood="conditionGood"
 conditionSafe="conditionSafe"
 
-conditions = [conditionDanger, conditionTooHigh, conditionSerious, conditionGood, conditionSafe]
+conditions = [conditionUltra, conditionDanger, conditionTooHigh, conditionSerious, conditionGood, conditionSafe]
 
 conditionStyleDict = {
+    conditionUltra : {'backgroundColor': 'blueviolet', 'color': 'white'},
     conditionDanger : {'backgroundColor': 'firebrick', 'color': 'white'},
     conditionTooHigh: {'color': 'tomato'},
     conditionSerious: {'color': 'yellow'},
@@ -793,52 +433,58 @@ def braced(condition):
     return "("+condition+")"
 
 KontaktrisikoClass = {
-    conditionDanger : '{Kontaktrisiko} > 0 && {Kontaktrisiko} < 100',
+    conditionUltra : '{Kontaktrisiko} > 0 && {Kontaktrisiko} < 50',
+    conditionDanger : '{Kontaktrisiko} >= 50 && {Kontaktrisiko} < 100',
     conditionTooHigh: '{Kontaktrisiko} >= 100 && {Kontaktrisiko} < 1000',
     conditionSerious: '{Kontaktrisiko} >= 1000 && {Kontaktrisiko} < 2500',
     conditionGood: '{Kontaktrisiko} >= 2500 && {Kontaktrisiko} < 10000',
-    conditionSafe: '{Kontaktrisiko} > 10000'
+    conditionSafe: '{Kontaktrisiko} >= 10000'
 }
 
-FaellePro100kLetzte7TageClass = {
-    conditionDanger : '{InzidenzFallNeu-7-Tage} > 50',
-    conditionTooHigh: '{InzidenzFallNeu-7-Tage} > 20 && {InzidenzFallNeu-7-Tage} <= 50',
-    conditionSerious: '{InzidenzFallNeu-7-Tage} > 5 && {InzidenzFallNeu-7-Tage} <= 20',
-    conditionGood: '{InzidenzFallNeu-7-Tage} >= 1 && {InzidenzFallNeu-7-Tage} <= 5',
-    conditionSafe: '{InzidenzFallNeu-7-Tage} < 1'
-}
+def makeExpression(name, low=None, high=None):
+    nameVar = "{"+name+"}"
+    if low is None:
+        return "{} >= {}".format(nameVar, high)
+    if high is None:
+        return "{} < {}".format(nameVar, low)
+    return "{} >= {} && {} < {}".format(nameVar, low, nameVar, high)
 
-FaellePro100kPrognoseClass = {
-    conditionDanger : '{InzidenzFallNeu-Prognose-4-Wochen} > 50',
-    conditionTooHigh: '{InzidenzFallNeu-Prognose-4-Wochen} > 20 && {InzidenzFallNeu-Prognose-4-Wochen} <= 50',
-    conditionSerious: '{InzidenzFallNeu-Prognose-4-Wochen} > 5 && {InzidenzFallNeu-Prognose-4-Wochen} <= 20',
-    conditionGood: '{InzidenzFallNeu-Prognose-4-Wochen} >= 1 && {InzidenzFallNeu-Prognose-4-Wochen} <= 5',
-    conditionSafe: '{InzidenzFallNeu-Prognose-4-Wochen} < 1'
-}
 
-FaellePro100kPrognose2Class = {
-    conditionDanger : '{InzidenzFallNeu-Prognose-8-Wochen} > 50',
-    conditionTooHigh: '{InzidenzFallNeu-Prognose-8-Wochen} > 20 && {InzidenzFallNeu-Prognose-8-Wochen} <= 50',
-    conditionSerious: '{InzidenzFallNeu-Prognose-8-Wochen} > 5 && {InzidenzFallNeu-Prognose-8-Wochen} <= 20',
-    conditionGood: '{InzidenzFallNeu-Prognose-8-Wochen} >= 1 && {InzidenzFallNeu-Prognose-8-Wochen} <= 5',
-    conditionSafe: '{InzidenzFallNeu-Prognose-8-Wochen} < 1'
-}
+def makeConditionClass(name, ultra, danger, tooHigh, serious, good):
+    c=  {
+        conditionUltra : makeExpression(name, None, ultra),
+        conditionDanger : makeExpression(name, danger, ultra),
+        conditionTooHigh: makeExpression(name, tooHigh, danger),
+        conditionSerious: makeExpression(name, serious, tooHigh),
+        conditionGood: makeExpression(name, good, serious),
+        conditionSafe: makeExpression(name, good),
+    }
+    #print(c)
+    return c
 
-AnzahlFallTrendClass = {
-    conditionDanger : '{InzidenzFallNeu-7-Tage-Trend-Spezial} > 3',
-    conditionTooHigh: '{InzidenzFallNeu-7-Tage-Trend-Spezial} > 1 && {InzidenzFallNeu-7-Tage-Trend-Spezial} <= 3',
-    conditionSerious: '{InzidenzFallNeu-7-Tage-Trend-Spezial} > 0.9 && {InzidenzFallNeu-7-Tage-Trend-Spezial} <= 1',
-    conditionGood: '{InzidenzFallNeu-7-Tage-Trend-Spezial} > 0.3 && {InzidenzFallNeu-7-Tage-Trend-Spezial} <= 0.9',
-    conditionSafe: '{InzidenzFallNeu-7-Tage-Trend-Spezial} < 0.3'
-}
+
+FaellePro100kLetzte7TageClass = makeConditionClass("InzidenzFallNeu_7TageSumme",100,50,20,5,1)
+FaellePro100kPrognoseClass = makeConditionClass("InzidenzFallNeu_Prognose_4_Wochen",100,50,20,5,1)
+FaellePro100kPrognose2Class = makeConditionClass("InzidenzFallNeu_Prognose_8_Wochen",100,50,20,5,1)
+InzidenzRKIClass = makeConditionClass("MeldeTag_InzidenzFallNeu_Gestern_7TageSumme",100,50,20,5,1)
+InzidenzRKIPrognoseClass = makeConditionClass("MeldeTag_InzidenzFallNeu_Prognose_4_Wochen",100,50,20,5,1)
+
+
+AnzahlFallTrendClass = makeConditionClass("InzidenzFallNeu_7TageSumme_Trend_Spezial",3,2,1,0.9,0.3)
+AnzahlFallTrendRKIClass = makeConditionClass("MeldeTag_InzidenzFallNeu_Trend",3,2,1,0.9,0.3)
 
 LandkreisClass = {
-    conditionDanger : KontaktrisikoClass[conditionDanger] +" || "+ braced(FaellePro100kLetzte7TageClass[conditionDanger])+" || "+braced(AnzahlFallTrendClass[conditionDanger]),
-    conditionTooHigh: KontaktrisikoClass[conditionTooHigh]+" && "+ Not(FaellePro100kLetzte7TageClass[conditionDanger])+" && "+ Not(AnzahlFallTrendClass[conditionDanger]),
-    conditionSerious: KontaktrisikoClass[conditionSerious]+" && "+ Not(FaellePro100kLetzte7TageClass[conditionDanger])+" && "+ Not(AnzahlFallTrendClass[conditionDanger]),
-    conditionGood: KontaktrisikoClass[conditionGood]+" && "+ Not(FaellePro100kLetzte7TageClass[conditionDanger])+" && "+ Not(AnzahlFallTrendClass[conditionDanger]),
-    conditionSafe: KontaktrisikoClass[conditionSafe]+" && "+ Not(FaellePro100kLetzte7TageClass[conditionDanger])+" && "+ Not(AnzahlFallTrendClass[conditionDanger]),
+    conditionUltra : KontaktrisikoClass[conditionUltra] +" || "+ braced(FaellePro100kLetzte7TageClass[conditionUltra])+" || "+braced(AnzahlFallTrendClass[conditionUltra]),
+    conditionDanger : "("+KontaktrisikoClass[conditionDanger]+" || "+ braced(FaellePro100kLetzte7TageClass[conditionDanger])+ ") && "+ Not(FaellePro100kLetzte7TageClass[conditionUltra])+" && "+ Not(AnzahlFallTrendClass[conditionUltra]),
+    conditionTooHigh: KontaktrisikoClass[conditionTooHigh]+" && "+ Not(FaellePro100kLetzte7TageClass[conditionUltra])+" && "+ Not(AnzahlFallTrendClass[conditionUltra])+" && "+ Not(FaellePro100kLetzte7TageClass[conditionDanger])+" && "+ Not(AnzahlFallTrendClass[conditionDanger]),
+    conditionSerious: KontaktrisikoClass[conditionSerious]+" && "+ Not(FaellePro100kLetzte7TageClass[conditionUltra])+" && "+ Not(AnzahlFallTrendClass[conditionUltra])+" && "+ Not(FaellePro100kLetzte7TageClass[conditionDanger])+" && "+ Not(AnzahlFallTrendClass[conditionDanger]),
+    conditionGood: KontaktrisikoClass[conditionGood]+" && "+ Not(FaellePro100kLetzte7TageClass[conditionUltra])+" && "+ Not(AnzahlFallTrendClass[conditionUltra])+" && "+ Not(FaellePro100kLetzte7TageClass[conditionDanger])+" && "+ Not(AnzahlFallTrendClass[conditionDanger]),
+    conditionSafe: KontaktrisikoClass[conditionSafe]+" && "+ Not(FaellePro100kLetzte7TageClass[conditionUltra])+" && "+ Not(AnzahlFallTrendClass[conditionUltra])+" && "+ Not(FaellePro100kLetzte7TageClass[conditionDanger])+" && "+ Not(AnzahlFallTrendClass[conditionDanger]),
 }
+
+#print(LandkreisClass)
+
+#    conditionDanger : KontaktrisikoClass[conditionDanger]+" || "+ braced(FaellePro100kLetzte7TageClass[conditionDanger])+ "&& "+ Not(FaellePro100kLetzte7TageClass[conditionUltra])+" && "+ Not(AnzahlFallTrendClass[conditionUltra]),
 
 xClass = {
     conditionDanger : '',
@@ -979,21 +625,17 @@ def make_style_data_conditional():
     ]
 #    result = result + nonDefaultColWidthStyles
     result = result + width_style_conditional
-    # result = result + conditionalStyles(FaellePro100kLetzte7TageClass, ['FaellePro100kLetzte7Tage'])
-    # result = result + conditionalStyles(AnzahlFallTrendClass, ['AnzahlFallTrend'])
-    # result = result + conditionalStyles(KontaktrisikoClass, ['Kontaktrisiko'])
-    # result = result + conditionalStyles(LandkreisClass, ['Landkreis'])
-    result = result + conditionalStyles(FaellePro100kLetzte7TageClass, 'InzidenzFallNeu-7-Tage')
-    result = result + conditionalStyles(AnzahlFallTrendClass, 'InzidenzFallNeu-7-Tage-Trend-Spezial')
+    result = result + conditionalStyles(FaellePro100kLetzte7TageClass, 'InzidenzFallNeu_7TageSumme')
+    result = result + conditionalStyles(AnzahlFallTrendClass, 'InzidenzFallNeu_7TageSumme_Trend_Spezial')
+    result = result + conditionalStyles(AnzahlFallTrendRKIClass, 'MeldeTag_InzidenzFallNeu_Trend')
     result = result + conditionalStyles(KontaktrisikoClass, 'Kontaktrisiko')
     result = result + conditionalStyles(LandkreisClass, 'Landkreis')
-    result = result + conditionalStyles(FaellePro100kPrognoseClass, 'InzidenzFallNeu-Prognose-4-Wochen')
-    result = result + conditionalStyles(FaellePro100kPrognose2Class, 'InzidenzFallNeu-Prognose-8-Wochen')
+    result = result + conditionalStyles(FaellePro100kPrognoseClass, 'InzidenzFallNeu_Prognose_4_Wochen')
+    result = result + conditionalStyles(FaellePro100kPrognose2Class, 'InzidenzFallNeu_Prognose_8_Wochen')
+    result = result + conditionalStyles(InzidenzRKIClass, 'MeldeTag_InzidenzFallNeu_Gestern_7TageSumme')
+    result = result + conditionalStyles(InzidenzRKIPrognoseClass, 'MeldeTag_InzidenzFallNeu_Prognose_4_Wochen')
 
     return result
-
-
-
 
 cs_data = make_style_data_conditional()
 #print("cs_data", cs_data)
@@ -1097,7 +739,7 @@ h_header = html.Header(
     },
     children=[
         html.H1(className="app-header", children=appTitle, style={'color': colors['text'], 'text-decoration': 'none'}, id="title_header"),
-        html.H2(className="app-header", children="ACHTUNG: Die Zahlen in der Tabelle sind aktuell falsch. Bitte nicht verwenden. Arbeite an der Behebung.", style={'color':'red', 'text-decoration': 'none'}, id="title_alarm"),
+        #html.H2(className="app-header", children="Die Zahlen in der Tabelle sind wieder benutzbar.", style={'color':'green', 'text-decoration': 'none'}, id="title_alarm"),
         html.H4(className="app-header-date",
                 children="Datenstand: {} 00:00 Uhr (wird täglich aktualisiert)".format(dataVersionDate),
                 style={'color': colors['text']}),
@@ -1157,59 +799,101 @@ h_Erlauterung=html.P([
 h_News=html.P([
     html.Span("News:", className=introClass),
     html.P(
-        " Version 0.9.18: Prognosespalten hinzugefügt für Inzidenzen in 4 und 8 Wochen und Tage bis Inzidenz 3 und 7"
+        " Version 1.0.2.0: Es gibt jetzt auch für die Fallzahlen nach Meldedatum eine Trend-, R-Wert- und 4-Wochen-Prognose."
+        " Damit lässen sich jetzt die Zahlen nach Veröffentlichungsdatum und nach Meldedatum noch besser vergleichen."
+        " Die Trendberechnung nach Meldedatum ist umständlicher, als man denkt. Um sie korrekt zu machen, kann man nicht "
+        " einfach Zeitabschnitte des aktuellen Datenstands vergleichen, sondern braucht zusätzlich die Zahlenreihe eines"
+        " 7 Tage älteren Dumps, der für die jüngeren Tage genauso unvollständig ist, wie der aktuelle Dump für das gestrige"
+        " Meldedatum. Da ich aber alle vergangengen Dumps seit April 2020 im direkten Zugriff habe, war das machbar."
+        " Viel Spaß beim Vergleichen."
         "", className=bodyClass),
     html.P(
-        " Version 0.9.17: Fehler in der Datenaufbereitung gefixt, der zwischen dem 16.12. und 25.12.2020 fehlerhafte Werte verursacht hat. Sorry dafür."
+        " Version 1.0.1.0: Jetzt passen wirklich alle Zahlen. Es gibt jetzt eine klarere und neutralere Unterscheidung zwischen "
+        " den publizierten Fallzahlen und den Fallzahlen nach Meldedatum, die das RKi zur Berechnung der 'offiziellen'"
+        " 7-Tage-Inzidenz heranzieht."
         "", className=bodyClass),
     html.P(
-        " Version 0.9.16: R7-Berechnnung von sqrt(RwK) auf RwK^(4/7) geändert."
+        " Version 1.0.0.0: Die Seite sieht zwar noch fast genauso aus wie vorher, aber die Datenpipeline und alle Berechnungen "
+        " sind komplett von Grundauf neu geschrieben. Es sollten jetzt die neuen täglichen Fälle und"
+        " die Gesamtzahlen identisch mit den offiziell vom RKI veröffentlichten Zahlen sein. Die neue Datenpipeline ist ganz frisch und kann noch Fehler enthalten, wobei die Fallzahlen "
+        " alle ziemlich gut aussehen."
         "", className=bodyClass),
     html.P(
-        " Version 0.9.15: Weitere Spalten hinzugefügt, um die Anzahl von Fällen anzuzeigen, die bei der offiziellen Berechnung der"
-        " 7-Tage-Inzidenz durch das RKI unter den Tisch fallen, weil sie später als 7 Tage nach der Meldung beim Gesundheitsamt ans RKI gemeldet wurden."
-        " Neu ist auch die Spalte R7, die in ihrer Bedeutung und Dimension in etwa dem berühmten 7-Tage-R-Wert entspricht. Die .csv-Datei enthält jetzt Felder"
-        " zum Datenstand und zur Software-Version, mit der die Tabelle generiert wurde. Der Dunkelzifferfaktor wurde zudem von 6,25 auf 3,5 reduziert."
+        "Ansonsten gibt es noch als erstes kleines neues, unübersehbares Feature: Condition Ultra beziehungsweise violett. Sie markiert im Prinzip"
+        " Inzidenzen über 100. Neu ist zudem eine Spalte CFR unter Todesfälle. DIe CFR oder Fallsterblichkeit ist, wie viele von den positiv"
+        " getesteten ingesamt verstorben sind."
         "", className=bodyClass),
     html.P(
-        " Version 0.9.14: Weiteren Fehler bei der Berechnung der Faelle/100k bei Bundesländern gefixt. Dank an Andreas für den Hinweis"
+        "Des weiteren gibt es zwei wesentliche Unterschiede in der Berechnung der Zahlen:"
         "", className=bodyClass),
     html.P(
-        " Version 0.9.13: Fehler bei der Berechnung der Faelle/100k bei Bundesländern gefixt. Dank an Marcus für den Hinweis."
+        "1) Der Riskofaktor ist jetzt geringer, weil nur noch die Fälle der letzten Woche und nicht der letzten 2 Wochen als Grundlage für"
+        " die Zahl der Infizierten herangezogen wird."
+        "", className=bodyClass),
+
+    html.P(
+        "2) Die Trendberechnung und 7-Tage-Inzidenz berechnen nun alle Fälle mit ein. Die alte Version hatte als 'Kompromiss' "
+        " alle Fälle ignoriert, die länger als 14 Tage zur Meldung bebraucht haben. Bei höherer Zahl an Nachmeldungen kann"
+        " man einfach die in den Spalten unter 'Fälle strikt 7 Tage' heranziehen."
         "", className=bodyClass),
     html.P(
-        " Version 0.9.12: Schnelleres Laden der Tabelle durch Dash-Update."
+        "3) Die Meldeverzögerung bezieht sich nur noch auf die am aktuellen Tag gemeldeten Fälle und kann sich von Tag zu Tag stark ändern."
         "", className=bodyClass),
-    html.P(
-        " Version 0.9.11: Mittelwert, Median und Standardabweichung der Meldeverzögerung hinzufügt, Datendownload als .csv emöglicht."
-        "", className=bodyClass),
-    html.P(
-        " Version 0.9.10: Fehlerhafte Berechnung der Todesfälle korregiert. Vielen Dank an @Stanny96 und alle Anderen, die mich auf Fehler hingewiesen haben."
-        "", className=bodyClass),
-    html.P(" Version 0.9.9: Bundesländer und Deutschland tauchen jetzt als eigene Region in der Liste auf. So lassen sich"
-           " sehr einfach Bundesländer untereinander oder ein Kreis mit dem Landesdurchschitt oder ein Land mit dem Bund vergleichen."
-           "", className=bodyClass),
-    html.P(" Version 0.9.8: Veränderung der Platzierung gegenüber gestern wird angezeigt"
-           "", className=bodyClass),
-    html.P(" Version 0.9.7: Sie Spaltenheader bleiben stehen beim scrollen."
-              "", className=bodyClass),
-    html.P(" Version 0.9.6: Bei den Berechnungen für einzelne Landkreise gab es in der Version eine bedeutende Änderung. Die Definition"
-           " wurde geändert, was die Zählung der Fälle pro Woche betrifft. Als Fall in den letzten 7 Tagen gilt nun,"
-           " wenn der Fall in den letzten 7 Tagen beim RKI eingegangen ist und in den letzten 14 Tagen beim Gesundheitsamt"
-           " gemeldet wurde. Hintergrund ist, dass es bei einzelnen Landkreisen immer wieder zu Nachmeldungen von zig Fällen"
-           " ans RKI kommt, die teilweise Wochen oder Monate zurückliegen. In Einzelfällen führte das zu einem zu hohen Risikoranking"
-           " und einem verfälschten Bild der Entwicklung."
-           "", className=bodyClass),
-    html.P(" Während das RKI nur als Fälle der letzten 7 Tage diejenigen ausweist, die sich auch in den letzten 7 Tagen"
-            " beim beim Gesundheitsamt gemeldet haben, fallen in der RKI-Landkreis-7-Tage-Rechnung alle Fälle unter den Tisch"
-            " die nicht auch in den letzten 7 Tagen eingegangen sind. Dadurch sind die RKI-Zahlen für die letzten 7 Tage"
-            " meist zu niedrig, je nach Meldeverzögerung, während sie hier weniger zu niedrig oder zu hoch sind, weil hier"
-            " verspätet eingegange Fälle der vorletzten 7 Tage den letzten Tagen zugeschlagen werden, wenn sie erst in den"
-            " letzten 7 Tagen eingangen sind. Es wäre interessant zu wissen, warum Wochen zurückliegende Fälle in nennenswerter Zahl, manchmal"
-            " in der Grössenordung von zig bis über hundert Fällen in einem Landkreis alle an einem Tag nachgemeldet werden."
-            " Es gibt seit Version 0.9.15 Spalten, die die vom RKI bei der Inzidenzberechnung ignoeriert werden."
-            " Die lokalen Behörden weisen auf ihren Webseiten ebenfalls oft höhere Inzidenzen als das RKI aus."
-            "", className=bodyClass),
+
+    # html.P(
+    #     " Version 0.9.18: Prognosespalten hinzugefügt für Inzidenzen in 4 und 8 Wochen und Tage bis Inzidenz 3 und 7"
+    #     "", className=bodyClass),
+    # html.P(
+    #     " Version 0.9.17: Fehler in der Datenaufbereitung gefixt, der zwischen dem 16.12. und 25.12.2020 fehlerhafte Werte verursacht hat. Sorry dafür."
+    #     "", className=bodyClass),
+    # html.P(
+    #     " Version 0.9.16: R7-Berechnnung von sqrt(RwK) auf RwK^(4/7) geändert."
+    #     "", className=bodyClass),
+    # html.P(
+    #     " Version 0.9.15: Weitere Spalten hinzugefügt, um die Anzahl von Fällen anzuzeigen, die bei der offiziellen Berechnung der"
+    #     " 7-Tage-Inzidenz durch das RKI unter den Tisch fallen, weil sie später als 7 Tage nach der Meldung beim Gesundheitsamt ans RKI gemeldet wurden."
+    #     " Neu ist auch die Spalte R7, die in ihrer Bedeutung und Dimension in etwa dem berühmten 7-Tage-R-Wert entspricht. Die .csv-Datei enthält jetzt Felder"
+    #     " zum Datenstand und zur Software-Version, mit der die Tabelle generiert wurde. Der Dunkelzifferfaktor wurde zudem von 6,25 auf 3,5 reduziert."
+    #     "", className=bodyClass),
+    # html.P(
+    #     " Version 0.9.14: Weiteren Fehler bei der Berechnung der Faelle/100k bei Bundesländern gefixt. Dank an Andreas für den Hinweis"
+    #     "", className=bodyClass),
+    # html.P(
+    #     " Version 0.9.13: Fehler bei der Berechnung der Faelle/100k bei Bundesländern gefixt. Dank an Marcus für den Hinweis."
+    #     "", className=bodyClass),
+    # html.P(
+    #     " Version 0.9.12: Schnelleres Laden der Tabelle durch Dash-Update."
+    #     "", className=bodyClass),
+    # html.P(
+    #     " Version 0.9.11: Mittelwert, Median und Standardabweichung der Meldeverzögerung hinzufügt, Datendownload als .csv emöglicht."
+    #     "", className=bodyClass),
+    # html.P(
+    #     " Version 0.9.10: Fehlerhafte Berechnung der Todesfälle korregiert. Vielen Dank an @Stanny96 und alle Anderen, die mich auf Fehler hingewiesen haben."
+    #     "", className=bodyClass),
+    # html.P(" Version 0.9.9: Bundesländer und Deutschland tauchen jetzt als eigene Region in der Liste auf. So lassen sich"
+    #        " sehr einfach Bundesländer untereinander oder ein Kreis mit dem Landesdurchschitt oder ein Land mit dem Bund vergleichen."
+    #        "", className=bodyClass),
+    # html.P(" Version 0.9.8: Veränderung der Platzierung gegenüber gestern wird angezeigt"
+    #        "", className=bodyClass),
+    # html.P(" Version 0.9.7: Sie Spaltenheader bleiben stehen beim scrollen."
+    #           "", className=bodyClass),
+    # html.P(" Version 0.9.6: Bei den Berechnungen für einzelne Landkreise gab es in der Version eine bedeutende Änderung. Die Definition"
+    #        " wurde geändert, was die Zählung der Fälle pro Woche betrifft. Als Fall in den letzten 7 Tagen gilt nun,"
+    #        " wenn der Fall in den letzten 7 Tagen beim RKI eingegangen ist und in den letzten 14 Tagen beim Gesundheitsamt"
+    #        " gemeldet wurde. Hintergrund ist, dass es bei einzelnen Landkreisen immer wieder zu Nachmeldungen von zig Fällen"
+    #        " ans RKI kommt, die teilweise Wochen oder Monate zurückliegen. In Einzelfällen führte das zu einem zu hohen Risikoranking"
+    #        " und einem verfälschten Bild der Entwicklung."
+    #        "", className=bodyClass),
+    # html.P(" Während das RKI nur als Fälle der letzten 7 Tage diejenigen ausweist, die sich auch in den letzten 7 Tagen"
+    #         " beim beim Gesundheitsamt gemeldet haben, fallen in der RKI-Landkreis-7-Tage-Rechnung alle Fälle unter den Tisch"
+    #         " die nicht auch in den letzten 7 Tagen eingegangen sind. Dadurch sind die RKI-Zahlen für die letzten 7 Tage"
+    #         " meist zu niedrig, je nach Meldeverzögerung, während sie hier weniger zu niedrig oder zu hoch sind, weil hier"
+    #         " verspätet eingegange Fälle der vorletzten 7 Tage den letzten Tagen zugeschlagen werden, wenn sie erst in den"
+    #         " letzten 7 Tagen eingangen sind. Es wäre interessant zu wissen, warum Wochen zurückliegende Fälle in nennenswerter Zahl, manchmal"
+    #         " in der Grössenordung von zig bis über hundert Fällen in einem Landkreis alle an einem Tag nachgemeldet werden."
+    #         " Es gibt seit Version 0.9.15 Spalten, die die vom RKI bei der Inzidenzberechnung ignoeriert werden."
+    #         " Die lokalen Behörden weisen auf ihren Webseiten ebenfalls oft höhere Inzidenzen als das RKI aus."
+    #         "", className=bodyClass),
 ])
 
 h_About=html.P([
@@ -1235,9 +919,9 @@ h_About=html.P([
 
 h_Downloads = html.P([
     html.H4(html.Span("Downloads", className=introClass)),
-    html.P([html.A(html.Span("Angereicherte Ursprungsdaten als .csv herunterladen", className=bodyClass),
+    html.P([html.A(html.Span("Der Tabelle zugrundeliegende Daten als .csv herunterladen", className=bodyClass),
                   href=fullDataURL),
-            " (Kombination der RKI/NPGEO-Daten seit 29.4.2020 mit Eingangszeitstempeln und anderen zusätzlichen Feldern versehen)"]),
+            " (Es sind viel mehr Spalten und Zeilen enthalten, als angezeigt werden)"]),
     html.P(html.A(html.Span("Tabelle als .csv herunterladen", className=bodyClass), href=dataURL)),
 ])
 
@@ -1286,7 +970,7 @@ h_RwK = html.Span(["R", html.Sub("w"),"K"])
 
 h_RwDef = makeDefinition(h_RwK,
 '''
- ist ein wöchentlicher Reproduktionsfaktor. Er ist das Verhältnis aller Fälle der letzten 7 Tage gegenüber den 7
+ ist ein wöchentlicher Reproduktionsfaktor. Er ist das Verhältnis aller publizierten Fälle der letzten 7 Tage gegenüber den 7
  Tagen davor. Diese Zahl "schlägt" stärker aus als der "normale" Reproduktionsfaktor, aber über 1.0 heißt
  auch hier Ausbreitung und unter 1.0 Rückgang. Ein Wert von 2 bedeutet, dass in der letzten Woche ungefähr doppelt so viele
  so viele Fälle gemeldet wurden wie in der vorletzten Woche, ein Wert von 0,5 bedeutet ungefähr nur halb so viele neue Fälle.
@@ -1317,14 +1001,14 @@ gewinnt der, wo bisher pro 100.000 die wenigsten Fälle gemeldet wurden.
 N berechnet sich wie folgt:  
 """)
 
-h_Prognose=makeDefinition("Fälle je 100.000, in X Wochen",
+h_Prognose=makeDefinition("Publizierte Fälle je 100.000, in X Wochen",
 """
 Zeigt die 7-Tage-Inzidenz in X Wochen an, falls sich der aktuelle Trend fortsetzt, also RwK gleich bleibt.
  Das ist in der Realität in der Regel nicht so, und bei kleinen Zahlen und und auf Landkreis-Ebene ergeben
  sich gelegentlich absurd hohe Zahlen, aber so ist nun mal die Mathematik, wenn man den aktuellen Trend fortschreibt. 
 """)
 
-h_TageBis=makeDefinition("Fälle je 100.000, Tage bis X",
+h_TageBis=makeDefinition("Publizierte Fälle je 100.000, Tage bis X",
 """
 Zeigt an, wie viele Tage es dauert, bis eine Inzidenz von X erreicht ist, falls sich der aktuelle Trend fortsetzt, also RwK gleich bleibt.
  Ist die Zahl ist negativ, bedeutet dass erst mal, dass bei aktuellem Trend X niemals erreicht wird.
@@ -1334,16 +1018,19 @@ Zeigt an, wie viele Tage es dauert, bis eine Inzidenz von X erreicht ist, falls 
  seit X über- oder unterschritten wurde, hätte die ganze Zeit über derselbe Trend geherrscht wie aktuell.  
 """)
 
-h_Strikt=makeDefinition("Fälle strikt 7 Tage",
+h_Strikt=makeDefinition("Publizierte nach Meldedatum (RKI-Zählung)",
 '''
- enthält zum Vergleich die Berechnung, mit der das RKI die 7-Tage-Inzidenz ermittelt (Spalte "absolut"). Dabei fallen alle
- Fälle unter den Tisch, deren Meldedatum beim Gesundheitsamt älter als 7 Tage ist. "RKI ignoriert" enthält die Zahl der Fälle,
- die dabei wären, würde man bis zu 14 Tage Meldeverzug zulassen, so wie es hier allen anderen Berechnungen zugrundeliegt.
- "RKI ignoriert %" ist der Prozentsatz an ignorierten Fällen. Ein hohe Prozentsatz ist ein Indikator dafür, dass die
- Gesundheitsämter vor Ort überlastet sind. Bemerkenswert ist, dass einige Ämter as auch bei hohen Fallzahlen schaffen,
- sämtliche Fälle innerhalb von 7 Tagen zu testen und die Ergebnisse ans RKI zu übermitteln und 0 ignorierte Fälle zu produzieren.
+ enthält zum Vergleich die Berechnung, mit der das RKI die 7-Tage-Inzidenz ermittelt (Spalte "7-Tage-Inzidenz"). Dabei fallen
+ einerseits alle Fälle unter den Tisch, deren Meldedatum beim Gesundheitsamt älter als 7 Tage ist, andereseits gibt es
+ manchmal "Aufholeffekte", so dass die Zahl nach Meldedatum manchmal höher sein kann."Differenz zu publizierten Fällen"
+ enthält, wie der Titel sagt, die Differenz zwischen den in den letzteb Tagen publizierten Fällen und der Zahl der Fälle,
+ die in den letzten 7 Tagen beim Gesundheitsamt gemeldet *und* ans RKI übermittelt wurden.
+ "% zu publizierten Fällen" in der Anteil der Differenz an den publizierten Fällen.
+ Ein hoher Prozentsatz kann ein Indikator dafür sein, dass die Gesundheitsämter vor Ort überlastet sind, oder dass
+ ein größeres Cluster die Zahlen hochgetrieben hat.
  Die von lokalen Behörden ausgewiesene Inzidenz kann in der Nähe des "strikten" RKI-Werts ("absolut") liegen oder näher an meinem
- Wert ("Fälle letzte 7 Tage"), je nachdem, wie vor Ort gerechnet wird.
+ Wert ("Fälle letzte 7 Tage"), je nachdem, wie vor Ort gerechnet wird. Oft sind die lokal veröffentlichten Daten
+ auch den hier zugrundeliegenden Daten einen Tag voraus, weil sie erst um Mitternacht vom RKI gezählt werden.
 ''')
 
 
@@ -1364,17 +1051,18 @@ gemeldet hat, -5 bedeutet, dass seit 5 Tagen keine Meldungen eingegangen sind.
 h_MeldeDelay=makeDefinition("Meldeverzögerung",
 """
  ist eine Auswertung der Anzahl der Tage von der Meldung beim Gesundheitsamt bis zum Eingang und Zählung
- beim RKI als Fall in der offiziellen Statistik auf Bundesebene. Hierbei wird angezeigt: Der Mittelwert aller Verzögerungen 
+ beim RKI als Fall in der offiziellen Statistik auf Bundesebene. Hierbei wird angezeigt: Maximum und Mittelwert aller Verzögerungen 
  (Summe/Anzahl), der Median (ca. die Hälfte der Verzögerungen liegt unter dem Wert, Hälfte darüber),
-  die Standardabweichung (durchschnittliche Abweichung vom Mittel) angezeigt sowie die Zahl der Fälle seit dem 29.4.2020,
-  die in die Berechnung eingegangen sind.
+  die Standardabweichung (durchschnittliche Abweichung vom Mittel) angezeigt sowie die Zahl der Fälle,
+  die in die Berechnung eingegangen sind. Dabei werden alle heute gemeldeten Fälle sowie alle Negativmeldungen bzw."
+  Stornomeldungen mitgezählt, so dass die Zahl höher sein kann als die Zahl der heute gemeldeten Fälle.
 """)
 
 
 h_RisikoList=html.Ul([
     html.Li(["N = Bevölkerung / Dunkelzifferfaktor / ([Anzahl der Fälle in den letzten 2 Wochen] *",h_RwK,")"]),
     html.Li("Als Faktor für die Dunkelziffer wurde 3,5 gewählt, also auf 1 gemeldeten Infizierten werden 2,5 weitere ungemeldete vermutet"),
-    html.Li("Als grobe Annäherung an die Zahl der Ansteckenden wurde die Summe der Fälle der letzten zwei Wochen gewählt"),
+    html.Li("Als grobe Annäherung an die Zahl der Ansteckenden wurde die Summe der Fälle der letzten 7 Tage gewählt"),
     html.Li("Die Zahl der aktuell Ansteckenden wird zudem für die Risikoberechnung hochgerechnet,"
             "indem die Entwicklung von der vorletzten Woche zur letzten Woche prozentual unverändert fortgeschrieben wird "
             "und damit eher dem Stand am heutigen Tag entspricht."),
@@ -1407,6 +1095,11 @@ h_TextFarben=html.Div(["Im Text", h_TextFarbenList])
 
 h_BgFarbenList = html.Ul(
     [
+        html.Li([makeColorSpan("Ultra: ", conditionUltra),
+                 "Viel schlimmer als Super-rot."
+                ],
+                style=LiStyle
+        ),
         html.Li([makeColorSpan("Super-Rot: ", conditionDanger),
                  "Lasset alle Hoffnung fahren. Die Situation ist praktisch ausser Kontrolle."
                  "Wer kürzlich da war und ungeschützte Kontakte hatte, ist mit einer Wahrscheinlichkeit von (Anzahl der Kontakte)/N infiziert."
